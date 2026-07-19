@@ -41,6 +41,15 @@ Acquire_lockfile
 _TARGET="binary/boot/grub"
 
 # Local functions
+#
+# The trailing '\${dm_smbios_extra}' on each 'linux' line is a literal placeholder
+# (the '\$' keeps it unexpanded here, so GRUB expands it at boot). It lets a
+# boot-tester inject extra kernel cmdline through the real firmware -> GRUB ->
+# kernel chain via 'qemu -smbios' ('dm-qemu --smbios-append') with no image edit.
+# The reader that fills the variable is emitted at the top of the generated
+# grub.cfg (config/bootloaders/grub-pc/config.cfg); with no SMBIOS string set it
+# stays empty and this is a no-op. Emitting it here, in-generation, keeps the ISO
+# grub.cfg free of any post-generation edit.
 Grub_live_menu_entry() {
 	local LABEL="$1"
 	local KERNEL="$2"
@@ -50,7 +59,7 @@ Grub_live_menu_entry() {
 
 	cat >> "${LIVE_ENTRIES_TMP}" <<END
 menuentry "${LABEL}"${HOTKEY} {
-	linux	$KERNEL $APPEND
+	linux	$KERNEL $APPEND \${dm_smbios_extra}
 	initrd	$INITRD
 }
 END
@@ -69,10 +78,10 @@ Grub_live_autodetect_menu_entry ()
 # Autodetect if amd64 is supported
 menuentry "$LABEL" {
 	if cpuid -l; then
-		linux ${AMD64_KERNEL} ${APPEND}
+		linux ${AMD64_KERNEL} ${APPEND} \${dm_smbios_extra}
 		initrd ${AMD64_INITRD}
 	else
-		linux ${_686_KERNEL} ${APPEND}
+		linux ${_686_KERNEL} ${APPEND} \${dm_smbios_extra}
 		initrd ${_686_INITRD}
 	fi
 }
